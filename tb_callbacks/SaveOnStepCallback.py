@@ -7,7 +7,9 @@ from stable_baselines3.common.results_plotter import ts2xy
 
 
 class SaveOnStepCallback(BaseCallback):
-
+    """
+    Callback for saving the model every n steps.
+    """
     def __init__(self, check_freq: int, save_name: str, save_dir: str, log_dir: str, verbose=0):
         super(SaveOnStepCallback, self).__init__(verbose)
 

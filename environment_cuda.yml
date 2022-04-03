@@ -5,13 +5,12 @@ channels:
 # - defaults
 dependencies:
 # 1/5 req main
-    - python>=3.7,<3.9
+    - python=3.9
     - numpy
     - pandas
     - pip
 
     - aiohttp
-    - SQLAlchemy
     - python-telegram-bot
     - arrow
     - cachetools
@@ -77,6 +76,9 @@ dependencies:
     - pip:
         - mpu
         - ta
-        - freqtrade
+        - ../freqtrade
+        - ../ftworkdir/lazyft
         - stable-baselines3
         - sb3-contrib
+        - sqlalchemy
+        - hmmlearn

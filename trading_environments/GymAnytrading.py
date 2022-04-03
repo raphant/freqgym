@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from gym import spaces
 from gym.utils import seeding
+from loguru import logger
 
 
 class Actions(Enum):
@@ -23,7 +24,7 @@ class Positions(Enum):
 
 class GymAnytrading(gym.Env):
     """
-        Based on https://github.com/AminHP/gym-anytrading
+    Based on https://github.com/AminHP/gym-anytrading
 
     """
 
@@ -41,7 +42,10 @@ class GymAnytrading(gym.Env):
 
         # spaces
         self.action_space = spaces.Discrete(len(Actions))
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=self.shape, dtype=np.float32)
+        self.observation_space = spaces.Box(
+            low=-np.inf, high=np.inf, shape=self.shape, dtype=np.float32
+        )
+        logger.info(f'Observation space: {self.observation_space.shape}')
 
         # episode
         self._start_tick = self.window_size
@@ -56,11 +60,9 @@ class GymAnytrading(gym.Env):
         self._first_rendering = None
         self.history = None
 
-
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
-
 
     def reset(self):
         self._done = False
@@ -68,12 +70,11 @@ class GymAnytrading(gym.Env):
         self._last_trade_tick = self._current_tick - 1
         self._position = Positions.Short
         self._position_history = (self.window_size * [None]) + [self._position]
-        self._total_reward = 0.
-        self._total_profit = 1.  # unit
+        self._total_reward = 0.0
+        self._total_profit = 1.0  # unit
         self._first_rendering = True
         self.history = {}
         return self._get_observation()
-
 
     def step(self, action):
         self._done = False
@@ -88,8 +89,9 @@ class GymAnytrading(gym.Env):
         self._update_profit(action)
 
         trade = False
-        if ((action == Actions.Buy.value and self._position == Positions.Short) or
-            (action == Actions.Sell.value and self._position == Positions.Long)):
+        if (action == Actions.Buy.value and self._position == Positions.Short) or (
+            action == Actions.Sell.value and self._position == Positions.Long
+        ):
             trade = True
 
         if trade:
@@ -99,18 +101,16 @@ class GymAnytrading(gym.Env):
         self._position_history.append(self._position)
         observation = self._get_observation()
         info = dict(
-            total_reward = self._total_reward,
-            total_profit = self._total_profit,
-            position = self._position.value
+            total_reward=self._total_reward,
+            total_profit=self._total_profit,
+            position=self._position.value,
         )
         self._update_history(info)
 
         return observation, step_reward, self._done, info
 
-
     def _get_observation(self):
-        return self.signal_features[(self._current_tick-self.window_size):self._current_tick]
-
+        return self.signal_features[(self._current_tick - self.window_size) : self._current_tick]
 
     def _update_history(self, info):
         if not self.history:
@@ -118,7 +118,6 @@ class GymAnytrading(gym.Env):
 
         for key, value in info.items():
             self.history[key].append(value)
-
 
     def render(self, mode='human'):
         def _plot_position(position, tick):
@@ -140,12 +139,12 @@ class GymAnytrading(gym.Env):
         _plot_position(self._position, self._current_tick)
 
         plt.suptitle(
-            "Total Reward: %.6f" % self._total_reward + ' ~ ' +
-            "Total Profit: %.6f" % self._total_profit
+            "Total Reward: %.6f" % self._total_reward
+            + ' ~ '
+            + "Total Profit: %.6f" % self._total_profit
         )
 
         plt.pause(0.01)
-
 
     def render_all(self, mode='human'):
         window_ticks = np.arange(len(self._position_history))
@@ -163,10 +162,10 @@ class GymAnytrading(gym.Env):
         plt.plot(long_ticks, self.prices[long_ticks], 'go')
 
         plt.suptitle(
-            "Total Reward: %.6f" % self._total_reward + ' ~ ' +
-            "Total Profit: %.6f" % self._total_profit
+            "Total Reward: %.6f" % self._total_reward
+            + ' ~ '
+            + "Total Profit: %.6f" % self._total_profit
         )
-
 
     def close(self):
         plt.close()
@@ -181,8 +180,9 @@ class GymAnytrading(gym.Env):
         step_reward = 0
 
         trade = False
-        if ((action == Actions.Buy.value and self._position == Positions.Short) or
-            (action == Actions.Sell.value and self._position == Positions.Long)):
+        if (action == Actions.Buy.value and self._position == Positions.Short) or (
+            action == Actions.Sell.value and self._position == Positions.Long
+        ):
             trade = True
 
         if trade:
@@ -197,8 +197,9 @@ class GymAnytrading(gym.Env):
 
     def _update_profit(self, action):
         trade = False
-        if ((action == Actions.Buy.value and self._position == Positions.Short) or
-            (action == Actions.Sell.value and self._position == Positions.Long)):
+        if (action == Actions.Buy.value and self._position == Positions.Short) or (
+            action == Actions.Sell.value and self._position == Positions.Long
+        ):
             trade = True
 
         if trade or self._done:
@@ -212,18 +213,22 @@ class GymAnytrading(gym.Env):
     def max_possible_profit(self):
         current_tick = self._start_tick
         last_trade_tick = current_tick - 1
-        profit = 1.
+        profit = 1.0
 
         while current_tick <= self._end_tick:
             position = None
             if self.prices[current_tick] < self.prices[current_tick - 1]:
-                while (current_tick <= self._end_tick and
-                       self.prices[current_tick] < self.prices[current_tick - 1]):
+                while (
+                    current_tick <= self._end_tick
+                    and self.prices[current_tick] < self.prices[current_tick - 1]
+                ):
                     current_tick += 1
                 position = Positions.Short
             else:
-                while (current_tick <= self._end_tick and
-                       self.prices[current_tick] >= self.prices[current_tick - 1]):
+                while (
+                    current_tick <= self._end_tick
+                    and self.prices[current_tick] >= self.prices[current_tick - 1]
+                ):
                     current_tick += 1
                 position = Positions.Long
 
