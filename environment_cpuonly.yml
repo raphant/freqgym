@@ -5,7 +5,7 @@ channels:
 # - defaults
 dependencies:
     # 1/5 req main
-    - python>=3.7,<3.9
+    - python>=3.7,<3.10
     - numpy
     - pandas
     - pip

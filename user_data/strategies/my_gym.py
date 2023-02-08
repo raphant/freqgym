@@ -13,16 +13,16 @@ from stable_baselines3.ppo.ppo import PPO
 logger = logging.getLogger(__name__)
 
 COLUMNS_FILTER = [
-    'date',
-    'open',
-    'close',
-    'high',
-    'low',
-    'volume',
-    'buy',
-    'sell',
-    'buy_tag',
-    'exit_tag',
+    "date",
+    "open",
+    "close",
+    "high",
+    "low",
+    "volume",
+    "buy",
+    "sell",
+    "buy_tag",
+    "exit_tag",
 ]
 
 
@@ -47,7 +47,7 @@ class SagesFreqGym(IStrategy):
     trailing_stop_positive_offset = 0.017
     trailing_only_offset_is_reached = True
 
-    ticker_interval = '5m'
+    ticker_interval = "5m"
 
     use_sell_signal = True
 
@@ -70,7 +70,7 @@ class SagesFreqGym(IStrategy):
             # get the first file
             # model_file = next(files)
             model_file = Path(
-                'models/best_model_FreqGymNormalized_FreqtradeEnv_PPO_20220317_064037.zip'
+                "models/best_model_FreqGymNormalized_FreqtradeEnv_PPO_20220317_064037.zip"
             )
             assert model_file.exists(), f'Model file "{model_file}" does not exist.'
             self.model = PPO.load(
@@ -78,10 +78,10 @@ class SagesFreqGym(IStrategy):
             )  # Note: Make sure you use the same policy as the one used to train
             self.window_size = self.model.observation_space.shape[0]
         except Exception as e:
-            logger.exception(f'Could not load model: {e}')
+            logger.exception(f"Could not load model: {e}")
             raise
         else:
-            logger.info(f'Loaded model: {model_file}')
+            logger.info(f"Loaded model: {model_file}")
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         """
@@ -97,14 +97,14 @@ class SagesFreqGym(IStrategy):
         logger.info(f'Calculating TA indicators for {metadata["pair"]}')
         for period in [10, 20, 40, 80, 160]:
             # wma
-            dataframe[f'wma_{period}'] = ta.WMA(dataframe, timeperiod=period)
+            dataframe[f"wma_{period}"] = ta.WMA(dataframe, timeperiod=period)
             # rsi
-            dataframe[f'rsi_{period}'] = ta.RSI(dataframe, timeperiod=period)
+            dataframe[f"rsi_{period}"] = ta.RSI(dataframe, timeperiod=period)
             # rvi
-            dataframe[f'rvi_{period}'] = ta.RVI(dataframe, timeperiod=period)
+            dataframe[f"rvi_{period}"] = ta.RVI(dataframe, timeperiod=period)
 
         # volume roc
-        dataframe['volume_roc'] = ta.ROC(dataframe['volume'], timeperiod=1)
+        dataframe["volume_roc"] = ta.ROC(dataframe["volume"], timeperiod=1)
         # indicators = dataframe[dataframe.columns[~dataframe.columns.isin(COLUMNS_FILTER)]]
         # assert all(indicators.max() < 1.00001) and all(
         #     indicators.min() > -0.00001
@@ -122,7 +122,7 @@ class SagesFreqGym(IStrategy):
         # dataframe['buy'] = self.rl_model_predict(dataframe)
         logger.info(f'Populating buy signal for {metadata["pair"]}')
         action = self.rl_model_predict(dataframe)
-        dataframe['buy'] = (action == 1).astype('int')
+        dataframe["buy"] = (action == 1).astype("int")
 
         logger.info(f'{metadata["pair"]} - buy signal populated!')
         return dataframe
@@ -136,7 +136,7 @@ class SagesFreqGym(IStrategy):
         """
         logger.info(f'Populating sell signal for {metadata["pair"]}')
         action = self.rl_model_predict(dataframe)
-        dataframe['sell'] = (action == 2).astype('int')
+        dataframe["sell"] = (action == 2).astype("int")
         logger.info(f'{metadata["pair"]} - sell signal populated!')
         return dataframe
 

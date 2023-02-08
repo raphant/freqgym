@@ -10,12 +10,15 @@ params = BacktestParameters(
     # days=365,
     stake_amount="unlimited",
     starting_balance=1000,
-    max_open_trades=2,
-    pairs=['BTC/USDT', 'ETH/USDT'],
+    max_open_trades=1,
+    pairs=[
+        'BTC/USDT',
+        # 'ETH/USDT',
+    ],
     download_data=True,
 )
 if __name__ == '__main__':
-    runner = params.run('SagesGymCNN', load_from_hash=True)
+    runner = params.run('SagesGymCNN2', load_from_hash=False)
     report = runner.save()
     print(f'Sortino: {report.sortino_loss}', f'Sharpe: {report.sharp_loss}', sep='\n')
 

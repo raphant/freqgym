@@ -21,16 +21,16 @@ from stable_baselines3.ppo.ppo import PPO
 logger = logging.getLogger(__name__)
 
 COLUMNS_FILTER = [
-    'date',
-    'open',
-    'close',
-    'high',
-    'low',
-    'buy',
-    'sell',
-    'volume',
-    'buy_tag',
-    'exit_tag',
+    "date",
+    "open",
+    "close",
+    "high",
+    "low",
+    "buy",
+    "sell",
+    "volume",
+    "buy_tag",
+    "exit_tag",
 ]
 
 
@@ -55,7 +55,7 @@ class SagesGym2(IStrategy):
     trailing_stop_positive_offset = 0.017
     trailing_only_offset_is_reached = True
 
-    timeframe = '15m'
+    timeframe = "15m"
 
     use_sell_signal = True
 
@@ -81,7 +81,7 @@ class SagesGym2(IStrategy):
             # get the first file
             # model_file = next(files)
             model_file = Path(
-                'models/best_model_SagesGym2_SagesFreqtradeEnv_A2C_20220321_132443.zip'
+                "models/best_model_SagesGym2_SagesFreqtradeEnv_A2C_20220321_132443.zip"
             )
             assert model_file.exists(), f'Model file "{model_file}" does not exist.'
             self.model = A2C.load(
@@ -89,9 +89,9 @@ class SagesGym2(IStrategy):
             )  # Note: Make sure you use the same policy as the one used to train
             self.window_size = self.model.observation_space.shape[0]
         except Exception as e:
-            logger.exception(f'Could not load model: {e}')
+            logger.exception(f"Could not load model: {e}")
         else:
-            logger.info(f'Loaded model: {model_file}')
+            logger.info(f"Loaded model: {model_file}")
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         """
@@ -112,16 +112,18 @@ class SagesGym2(IStrategy):
         # ), "Error, values are not normalized!"
         # logger.info(f'{metadata["pair"]} - indicators populated!')
         # dataframe = self.custom_strategy.populate_indicators(dataframe, metadata)
-        dataframe['current_price'] = dataframe['close']
+        dataframe["current_price"] = dataframe["close"]
         return dataframe
 
-    @informative('4h', 'BTC/{stake}')
-    @informative('2h', 'BTC/{stake}')
-    @informative('1h', 'BTC/{stake}')
-    def populate_indicators_btc_4h(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        dataframe[f'rsi_{30}'] = ta.RSI(dataframe['close'], timeperiod=30)
-        dataframe['top'] = np.where(
-            dataframe['close'] == dataframe['close'].rolling(48).max(), 1, 0
+    @informative("4h", "BTC/{stake}")
+    @informative("2h", "BTC/{stake}")
+    @informative("1h", "BTC/{stake}")
+    def populate_indicators_btc_4h(
+        self, dataframe: DataFrame, metadata: dict
+    ) -> DataFrame:
+        dataframe[f"rsi_{30}"] = ta.RSI(dataframe["close"], timeperiod=30)
+        dataframe["top"] = np.where(
+            dataframe["close"] == dataframe["close"].rolling(48).max(), 1, 0
         )
         return dataframe
 
@@ -133,10 +135,10 @@ class SagesGym2(IStrategy):
         :return: DataFrame with buy column
         """
         # dataframe['buy'] = self.rl_model_predict(dataframe)
-        assert self.model is not None, 'Model is not loaded.'
+        assert self.model is not None, "Model is not loaded."
         logger.info(f'Populating buy signal for {metadata["pair"]}')
-        action = self.rl_model_predict(dataframe, metadata['pair'])
-        dataframe['buy'] = (action == 1).astype('int')
+        action = self.rl_model_predict(dataframe, metadata["pair"])
+        dataframe["buy"] = (action == 1).astype("int")
 
         logger.info(f'{metadata["pair"]} - buy signal populated!')
         return dataframe
@@ -149,10 +151,10 @@ class SagesGym2(IStrategy):
         :return: DataFrame with buy column
         """
         logger.info(f'Populating sell signal for {metadata["pair"]}')
-        action = self.rl_model_predict(dataframe, metadata['pair'])
-        dataframe['sell'] = (action == 2).astype('int')
+        action = self.rl_model_predict(dataframe, metadata["pair"])
+        dataframe["sell"] = (action == 2).astype("int")
         # print number of sell signals
-        print(dataframe['sell'].value_counts(), 'sell signals')
+        print(dataframe["sell"].value_counts(), "sell signals")
         logger.info(f'{metadata["pair"]} - sell signal populated!')
         return dataframe
 
@@ -163,7 +165,9 @@ class SagesGym2(IStrategy):
         indicators = dataframe.copy()
         for c in COLUMNS_FILTER:
             # remove every column that contains a substring of c
-            indicators = indicators.drop(columns=[col for col in indicators.columns if c in col])
+            indicators = indicators.drop(
+                columns=[col for col in indicators.columns if c in col]
+            )
         indicators = indicators.fillna(0).to_numpy()
         # start index where all indicators are available
         # print(f'{indicators.shape}')
@@ -193,7 +197,7 @@ class SagesGym2(IStrategy):
     ) -> float:
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         last_candle = dataframe.iloc[-1].squeeze()
-        pob = self.percent_of_balance_dict[last_candle.name.astype('int')]
+        pob = self.percent_of_balance_dict[last_candle.name.astype("int")]
         if pob > 0:
             return pob / 10 * self.wallets.get_available_stake_amount()
 

@@ -16,16 +16,16 @@ from stable_baselines3.ppo.ppo import PPO
 logger = logging.getLogger(__name__)
 
 COLUMNS_FILTER = [
-    'date',
-    'open',
-    'close',
-    'high',
-    'low',
-    'volume',
-    'buy',
-    'sell',
-    'buy_tag',
-    'exit_tag',
+    "date",
+    "open",
+    "close",
+    "high",
+    "low",
+    "volume",
+    "buy",
+    "sell",
+    "buy_tag",
+    "exit_tag",
 ]
 
 
@@ -50,7 +50,7 @@ class FreqGymNormalized(IStrategy):
     trailing_stop_positive_offset = 0.017
     trailing_only_offset_is_reached = True
 
-    ticker_interval = '5m'
+    ticker_interval = "5m"
 
     use_sell_signal = True
 
@@ -73,7 +73,7 @@ class FreqGymNormalized(IStrategy):
             # get the first file
             # model_file = next(files)
             model_file = Path(
-                'models/best_model_FreqGymNormalized_FreqtradeEnv_A2C_20220318_115558.zip'
+                "models/best_model_FreqGymNormalized_FreqtradeEnv_A2C_20220318_115558.zip"
             )
             assert model_file.exists(), f'Model file "{model_file}" does not exist.'
             self.model = A2C.load(
@@ -81,9 +81,9 @@ class FreqGymNormalized(IStrategy):
             )  # Note: Make sure you use the same policy as the one used to train
             self.window_size = self.model.observation_space.shape[0]
         except Exception as e:
-            logger.exception(f'Could not load model: {e}')
+            logger.exception(f"Could not load model: {e}")
         else:
-            logger.info(f'Loaded model: {model_file}')
+            logger.info(f"Loaded model: {model_file}")
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         """
@@ -98,97 +98,121 @@ class FreqGymNormalized(IStrategy):
         """
         logger.info(f'Calculating TA indicators for {metadata["pair"]}')
         # Plus Directional Indicator / Movement
-        dataframe['plus_di'] = normalize(ta.PLUS_DI(dataframe), 0, 100)
+        dataframe["plus_di"] = normalize(ta.PLUS_DI(dataframe), 0, 100)
 
         # # Minus Directional Indicator / Movement
-        dataframe['minus_di'] = normalize(ta.MINUS_DI(dataframe), 0, 100)
+        dataframe["minus_di"] = normalize(ta.MINUS_DI(dataframe), 0, 100)
 
         # Ultimate Oscillator
-        dataframe['uo'] = normalize(ta.ULTOSC(dataframe), 0, 100)
+        dataframe["uo"] = normalize(ta.ULTOSC(dataframe), 0, 100)
 
         # Hilbert Transform Indicator - SineWave
         hilbert = ta.HT_SINE(dataframe)
-        dataframe['htsine'] = normalize(hilbert['sine'], -1, 1)
-        dataframe['htleadsine'] = normalize(hilbert['leadsine'], -1, 1)
+        dataframe["htsine"] = normalize(hilbert["sine"], -1, 1)
+        dataframe["htleadsine"] = normalize(hilbert["leadsine"], -1, 1)
 
         # BOP                  Balance Of Power
-        dataframe['bop'] = normalize(ta.BOP(dataframe), -1, 1)
+        dataframe["bop"] = normalize(ta.BOP(dataframe), -1, 1)
 
         # STOCH - Stochastic
         stoch = ta.STOCH(dataframe)
-        dataframe['slowk'] = normalize(stoch['slowk'], 0, 100)
-        dataframe['slowd'] = normalize(stoch['slowd'], 0, 100)
+        dataframe["slowk"] = normalize(stoch["slowk"], 0, 100)
+        dataframe["slowd"] = normalize(stoch["slowd"], 0, 100)
 
         # STOCHF - Stochastic Fast
         stochf = ta.STOCHF(dataframe)
-        dataframe['fastk'] = normalize(stochf['fastk'], 0, 100)
-        dataframe['fastk'] = normalize(stochf['fastk'], 0, 100)
+        dataframe["fastk"] = normalize(stochf["fastk"], 0, 100)
+        dataframe["fastk"] = normalize(stochf["fastk"], 0, 100)
 
         # Bollinger Bands
-        bollinger2 = qtpylib.bollinger_bands(qtpylib.typical_price(dataframe), window=20, stds=2)
-        bollinger3 = qtpylib.bollinger_bands(qtpylib.typical_price(dataframe), window=20, stds=3)
+        bollinger2 = qtpylib.bollinger_bands(
+            qtpylib.typical_price(dataframe), window=20, stds=2
+        )
+        bollinger3 = qtpylib.bollinger_bands(
+            qtpylib.typical_price(dataframe), window=20, stds=3
+        )
 
-        dataframe['bb2_lower_gt_close'] = bollinger2['lower'].gt(dataframe['close']).astype('int')
-        dataframe['bb3_lower_gt_close'] = bollinger3['lower'].gt(dataframe['close']).astype('int')
+        dataframe["bb2_lower_gt_close"] = (
+            bollinger2["lower"].gt(dataframe["close"]).astype("int")
+        )
+        dataframe["bb3_lower_gt_close"] = (
+            bollinger3["lower"].gt(dataframe["close"]).astype("int")
+        )
 
         for period in self.timeperiods:
             # ADX                  Average Directional Movement Index
-            dataframe[f'adx_{period}'] = normalize(ta.ADX(dataframe, timeperiod=period), 0, 100)
+            dataframe[f"adx_{period}"] = normalize(
+                ta.ADX(dataframe, timeperiod=period), 0, 100
+            )
 
             # Aroon, Aroon Oscillator
             aroon = ta.AROON(dataframe, timeperiod=period)
-            dataframe[f'aroonup_{period}'] = normalize(aroon['aroonup'], 0, 100)
-            dataframe[f'aroondown_{period}'] = normalize(aroon['aroondown'], 0, 100)
-            dataframe[f'aroonosc_{period}'] = normalize(
+            dataframe[f"aroonup_{period}"] = normalize(aroon["aroonup"], 0, 100)
+            dataframe[f"aroondown_{period}"] = normalize(aroon["aroondown"], 0, 100)
+            dataframe[f"aroonosc_{period}"] = normalize(
                 ta.AROONOSC(dataframe, timeperiod=period), -100, 100
             )
 
             # CMO                  Chande Momentum Oscillator
-            dataframe[f'cmo_{period}'] = normalize(ta.CMO(dataframe, timeperiod=period), -100, 100)
+            dataframe[f"cmo_{period}"] = normalize(
+                ta.CMO(dataframe, timeperiod=period), -100, 100
+            )
 
             # DX                   Directional Movement Index
-            dataframe[f'dx_{period}'] = normalize(ta.DX(dataframe, timeperiod=period), 0, 100)
+            dataframe[f"dx_{period}"] = normalize(
+                ta.DX(dataframe, timeperiod=period), 0, 100
+            )
 
             # MFI                  Money Flow Index
-            dataframe[f'mfi_{period}'] = normalize(ta.MFI(dataframe, timeperiod=period), 0, 100)
+            dataframe[f"mfi_{period}"] = normalize(
+                ta.MFI(dataframe, timeperiod=period), 0, 100
+            )
 
             # MINUS_DI             Minus Directional Indicator
-            dataframe[f'minus_di_{period}'] = normalize(
+            dataframe[f"minus_di_{period}"] = normalize(
                 ta.MINUS_DI(dataframe, timeperiod=period), 0, 100
             )
 
             # PLUS_DI              Plus Directional Indicator
-            dataframe[f'plus_di_{period}'] = normalize(
+            dataframe[f"plus_di_{period}"] = normalize(
                 ta.PLUS_DI(dataframe, timeperiod=period), 0, 100
             )
 
             # Williams %R
-            dataframe[f'willr_{period}'] = normalize(
+            dataframe[f"willr_{period}"] = normalize(
                 ta.WILLR(dataframe, timeperiod=period), -100, 0
             )
 
             # RSI
-            dataframe[f'rsi_{period}'] = normalize(ta.RSI(dataframe, timeperiod=period), 0, 100)
+            dataframe[f"rsi_{period}"] = normalize(
+                ta.RSI(dataframe, timeperiod=period), 0, 100
+            )
 
             # Inverse Fisher transform on RSI: values [-1.0, 1.0] (https://goo.gl/2JGGoy)
-            rsi = 0.1 * (dataframe[f'rsi_{period}'] - 50)
-            dataframe[f'fisher_rsi_{period}'] = (np.exp(2 * rsi) - 1) / (np.exp(2 * rsi) + 1)
-            dataframe[f'fisher_rsi_{period}'] = normalize(dataframe[f'fisher_rsi_{period}'], -1, 1)
+            rsi = 0.1 * (dataframe[f"rsi_{period}"] - 50)
+            dataframe[f"fisher_rsi_{period}"] = (np.exp(2 * rsi) - 1) / (
+                np.exp(2 * rsi) + 1
+            )
+            dataframe[f"fisher_rsi_{period}"] = normalize(
+                dataframe[f"fisher_rsi_{period}"], -1, 1
+            )
 
             # STOCHRSI - Stochastic Relative Strength Index
             stoch_rsi = ta.STOCHRSI(dataframe, timeperiod=period)
-            dataframe[f'stochrsi_k_{period}'] = normalize(stoch_rsi['fastk'], 0, 100)
-            dataframe[f'stochrsi_d_{period}'] = normalize(stoch_rsi['fastd'], 0, 100)
+            dataframe[f"stochrsi_k_{period}"] = normalize(stoch_rsi["fastk"], 0, 100)
+            dataframe[f"stochrsi_d_{period}"] = normalize(stoch_rsi["fastd"], 0, 100)
 
             # # CORREL - Pearson's Correlation Coefficient (r)
             # dataframe[f'correl_{period}'] = normalize(ta.CORREL(dataframe, timeperiod=period), -1, 1)  # this is buggy
 
             # LINEARREG_ANGLE - Linear Regression Angle
-            dataframe[f'linangle_{period}'] = normalize(
+            dataframe[f"linangle_{period}"] = normalize(
                 ta.LINEARREG_ANGLE(dataframe, timeperiod=period), -90, 90
             )
 
-        indicators = dataframe[dataframe.columns[~dataframe.columns.isin(COLUMNS_FILTER)]]
+        indicators = dataframe[
+            dataframe.columns[~dataframe.columns.isin(COLUMNS_FILTER)]
+        ]
 
         assert all(indicators.max() < 1.00001) and all(
             indicators.min() > -0.00001
@@ -206,7 +230,7 @@ class FreqGymNormalized(IStrategy):
         # dataframe['buy'] = self.rl_model_predict(dataframe)
         logger.info(f'Populating buy signal for {metadata["pair"]}')
         action = self.rl_model_predict(dataframe)
-        dataframe['buy'] = (action == 1).astype('int')
+        dataframe["buy"] = (action == 1).astype("int")
 
         logger.info(f'{metadata["pair"]} - buy signal populated!')
         return dataframe
@@ -220,7 +244,7 @@ class FreqGymNormalized(IStrategy):
         """
         logger.info(f'Populating sell signal for {metadata["pair"]}')
         action = self.rl_model_predict(dataframe)
-        dataframe['sell'] = (action == 2).astype('int')
+        dataframe["sell"] = (action == 2).astype("int")
         logger.info(f'{metadata["pair"]} - sell signal populated!')
         return dataframe
 
@@ -232,9 +256,9 @@ class FreqGymNormalized(IStrategy):
             .fillna(0)
             .to_numpy()
         )
-        indicators2 = dataframe[dataframe.columns[~dataframe.columns.isin(COLUMNS_FILTER)]].fillna(
-            0
-        )
+        indicators2 = dataframe[
+            dataframe.columns[~dataframe.columns.isin(COLUMNS_FILTER)]
+        ].fillna(0)
         # convert above code to rolling
         # self.model.predict expects a numpy array of shape (batch_size, seq_len)
         # t1 = time.time()
@@ -249,15 +273,15 @@ class FreqGymNormalized(IStrategy):
             start = window - self.window_size
             end = window
             observation = indicators[start:end]
-            res, _ = self.model.predict(observation, deterministic=True)
+            res, _ = predict.predict(observation, deterministic=True)
             output.loc[end] = res
-        logger.info(f'Elapsed time default: {time.time() - t1}')
+        logger.info(f"Elapsed time default: {time.time() - t1}")
 
         return output
 
     def predict(self, x: pd.Series):
-        logger.info(f'Predicting action for {x}, type: {type(x)}')
-        return self.model.predict(x, deterministic=True)
+        logger.info(f"Predicting action for {x}, type: {type(x)}")
+        return predict.predict(x, deterministic=True)
 
 
 def normalize(data, min_value, max_value):

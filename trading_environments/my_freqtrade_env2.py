@@ -36,6 +36,11 @@ class Actions(Enum):
     Sell = 2
 
 
+# class PercentOfBalance(Enum):
+#     for i in range(1, 10):
+#         locals()["PercentOfBalance" + str(i)] = i
+
+
 def log_writer(log_queue):
     logger.info("Started log writer")
     while True:
@@ -59,7 +64,7 @@ logger.configure(
 )
 
 
-class SagesFreqtradeEnv(gym.Env):
+class SagesFreqtradeEnv2(gym.Env):
     """A freqtrade trading environment for OpenAI gym"""
 
     metadata = {"render.modes": ["human", "system", "none"]}
@@ -107,12 +112,25 @@ class SagesFreqtradeEnv(gym.Env):
 
         _, number_of_features = self.data.drop(columns=["date"], errors="ignore").shape
         self.shape = (self.window_size, number_of_features)
-        self.action_space = spaces.Discrete(len(Actions))
-        # self.action_space = spaces.MultiDiscrete([len(Actions), 10])
+        # self.action_space = spaces.Discrete(len(Actions))
+        self.action_space = spaces.MultiDiscrete([len(Actions), 10])
         shape = self.shape
-        self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=shape, dtype=np.float32
+        self.observation_space = spaces.Dict(
+            {
+                "data": spaces.Box(
+                    low=-np.inf, high=np.inf, shape=shape, dtype=np.float32
+                ),
+                "balance": spaces.Box(low=0, high=np.inf, shape=(1,), dtype=np.float64),
+                "current_profit": spaces.Box(
+                    low=-np.inf, high=np.inf, shape=(1,), dtype=np.float64
+                ),
+                "is_trade_open": spaces.Discrete(2),
+            }
         )
+        logger.info(f"Observation space: {self.observation_space}")
+        # self.observation_space = spaces.Box(
+        #     low=-np.inf, high=np.inf, shape=shape, dtype=np.float32
+        # )
         self._end_tick: int = 0
         self._current_tick: int = 0
         self._global_step = 0
@@ -154,6 +172,16 @@ class SagesFreqtradeEnv(gym.Env):
     @property
     def _prev_rate(self):
         return self.prices.loc[self._current_tick - 1][self.price_column]
+
+    @property
+    def _get_profit(self):
+        if not self.opened_trade:
+            return 0
+        try:
+            return self.opened_trade.calc_profit(self._current_rate, self.fee)
+        except KeyError:
+            logger.warning("Reached end of data")
+            return self.opened_trade.calc_profit(self._prev_rate, self.fee)
 
     @property
     def best_trade(self) -> Optional[LocalTrade]:
@@ -222,11 +250,19 @@ class SagesFreqtradeEnv(gym.Env):
 
     def _get_observation(self):
         to_numpy = self.pre_numpy_observation
-        return to_numpy[["return"]].to_numpy()
+        data = to_numpy.drop(columns=["date"]).to_numpy()
+        has_open_trade = bool(self.opened_trade)
+        return {
+            "data": np.asarray(data),
+            "balance": np.asarray(self.current_balance),
+            "is_trade_open": int(has_open_trade),
+            "current_profit": np.asarray(self._get_profit),
+        }
 
     def _take_action(self, action):
         # action, percent_of_balance = action
-        # percent_of_balance = max(percent_of_balance, 1)
+        percent_of_balance = max(percent_of_balance, 1)
+        action, percent_of_balance = action
         if action == Actions.Hold.value:
             # the NN chose to hold
 
@@ -248,8 +284,8 @@ class SagesFreqtradeEnv(gym.Env):
 
             if not self.opened_trade:
                 # there is no trade open, so create a new one
-                # stake_amount = percent_of_balance / 10 * self.current_balance * 0.99
-                stake_amount = self.stake_amount
+                stake_amount = percent_of_balance / 10 * self.current_balance * 0.99
+                # stake_amount = self.stake_amount
                 # try:
                 #     open_rate = self._next_rate
                 #     open_date = self._next_tick_date
@@ -286,11 +322,7 @@ class SagesFreqtradeEnv(gym.Env):
                 )
                 self.buy_observation_map[
                     (self.current_episode, len(self.closed_trades) + 1)
-                ] = {
-                    "observations": self.pre_numpy_observation,
-                    "trade_date": self.opened_trade.open_date,
-                    "trade_rate": self.opened_trade.open_rate,
-                }
+                ] = self._get_observation()
 
         elif action == Actions.Sell.value:
             # the NN chose to sell
@@ -332,12 +364,8 @@ class SagesFreqtradeEnv(gym.Env):
             f"Balance: ${self.current_balance:.2f}"
         )
         self.sell_observation_map[
-            (self.current_episode, len(self.closed_trades) + 1)
-        ] = {
-            "observations": self.pre_numpy_observation,
-            "trade_date": self.opened_trade.close_date,
-            "trade_rate": self.opened_trade.close_rate,
-        }
+            (self.current_episode, len(self.closed_trades))
+        ] = self._get_observation()
         self.opened_trade = None
 
     @staticmethod
@@ -359,7 +387,7 @@ class SagesFreqtradeEnv(gym.Env):
         # reward += reward * 0.1
         # set the reward to the profit per hour
         # this incentivizes shorter trades
-        return trade.close_profit_abs
+        return trade.close_profit
 
     def step(self, action):
         """
@@ -376,7 +404,7 @@ class SagesFreqtradeEnv(gym.Env):
         self._global_step += 1
 
         # are we at the end of the data or out of capital?
-        if self._current_tick >= self._end_tick:
+        if self._current_tick >= len(self.data) - 1:
             # if so, it's time to stop
             done = True
             if self.opened_trade:
@@ -445,7 +473,7 @@ class SagesFreqtradeEnv(gym.Env):
         self.total_reward = 0
         self.current_balance = self.initial_balance
         self._current_tick = self.window_size + 1
-        self._end_tick = len(self.data) - 1
+        self._end_tick = len(self.data) - 2
 
         return self._get_observation()
 

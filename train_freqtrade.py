@@ -27,20 +27,20 @@ from tb_callbacks import SaveOnStepCallback
 from trading_environments.my_freqtrade_env import SagesFreqtradeEnv
 
 # region FT Settings
-STRATEGY = 'FreqGymRScaler'
-CONFIG = 'user_data/config.json'
+STRATEGY = "FreqGymRScaler"
+CONFIG = "user_data/config.json"
 PAIR = "BTC/USDT"
 TRAINING_RANGE = "20210101-20211231"
-TIMEFRAME = '15m'
+TIMEFRAME = "15m"
 freqtrade_config = Configuration.from_files([CONFIG])
-freqtrade_config['timeframe'] = TIMEFRAME
-freqtrade_config['pairs'] = [PAIR]
+freqtrade_config["timeframe"] = TIMEFRAME
+freqtrade_config["pairs"] = [PAIR]
 WINDOW_SIZE = 10
 REQUIRED_STARTUP_CANDLES = 495
 # endregion
 
 # todo load last saved score and use it as a starting point to prevent overwriting
-MODEL_NAME = ''
+MODEL_NAME = ""
 
 LOAD_PREPROCESSED_DATA = True  # useful if you have to calculate a lot of features
 SAVE_PREPROCESSED_DATA = True
@@ -50,14 +50,14 @@ LOG_DIR = "./logs/"
 TENSORBOARD_LOG = "./tensorboard/"
 MODEL_DIR = Path("./models/")
 _preprocessed_data_file = Path(
-    'preprocessed',
+    "preprocessed",
     f"preprocessed_data__{PAIR.replace('/', '_')}__{TRAINING_RANGE}__{WINDOW_SIZE}.pickle",
 )
 """End of settings"""
-INDICATOR_FILTER = ['date', 'open', 'close', 'high', 'low', 'volume']
+INDICATOR_FILTER = ["date", "open", "close", "high", "low", "volume"]
 
 # hmm_model = Path(MODEL_DIR, f'btc_hmm.pickle')
-model_dict_path = MODEL_DIR / 'models.json'
+model_dict_path = MODEL_DIR / "models.json"
 if not model_dict_path.exists():
     model_dict = {}
 else:
@@ -102,19 +102,21 @@ def _load_indicators(
         logger.info("Loading preprocessed data from file")
         assert _preprocessed_data_file.exists(), "Unable to load preprocessed data!"
         populated_data = mpu.io.read(str(_preprocessed_data_file))
-        assert PAIR in populated_data, f"Loaded preprocessed data does not contain pair {PAIR}!"
+        assert (
+            PAIR in populated_data
+        ), f"Loaded preprocessed data does not contain pair {PAIR}!"
         populated_pair_data = populated_data[PAIR]
     else:
-        logger.info('Preprocessing data...')
+        logger.info("Preprocessing data...")
         ohlc_data = _load_data(
             freqtrade_config, PAIR, TIMEFRAME, TRAINING_RANGE, REQUIRED_STARTUP_CANDLES
         )
         populated_data = strategy.advise_all_indicators(ohlc_data)
         populated_pair_data = populated_data[PAIR]
         populated_pair_data.reset_index(drop=True, inplace=True)
-        logger.info('Dropping rows with NaN values')
+        logger.info("Dropping rows with NaN values")
         populated_pair_data.dropna(inplace=True)
-        logger.info(f'Temp new index begins at: {populated_pair_data.index[0]}')
+        logger.info(f"Temp new index begins at: {populated_pair_data.index[0]}")
         populated_pair_data.reset_index(drop=True, inplace=True)
         # trading_env = FreqtradeEnv(
         #     data=pair_data,
@@ -144,7 +146,7 @@ def _load_indicators(
     #     # remove every column that contains a substring of c
     #     indicators = indicators.drop(columns=[col for col in indicators.columns if c in col])
     # indicators.fillna(0, inplace=True)
-    input_data = price_data.drop(columns=['date', 'volume'])
+    input_data = price_data.drop(columns=["date", "volume"])
     input_data = pd.DataFrame(
         robust_scale(input_data.values, quantile_range=(0.1, 100 - 0.1)),
         columns=input_data.columns,
@@ -157,13 +159,13 @@ def _load_data(config, pair, timeframe, timerange, required_startup_candles):
     timerange = TimeRange.parse_timerange(timerange)
 
     return history.load_data(
-        datadir=config['datadir'],
+        datadir=config["datadir"],
         pairs=[pair],
         timeframe=timeframe,
         timerange=timerange,
         startup_candles=required_startup_candles + 1,
         fail_without_data=True,
-        data_format=config.get('dataformat_ohlcv', 'json'),
+        data_format=config.get("dataformat_ohlcv", "json"),
     )
 
 
@@ -179,7 +181,7 @@ def main():
         window_size=WINDOW_SIZE,  # how many past candles should it use as features
         pair=PAIR,
         stake_amount=100,
-        starting_balance=freqtrade_config['starting_balance'],
+        starting_balance=freqtrade_config["starting_balance"],
         punish_holding_amount=0,
     )
     # capitalize the first letter in every column name of price data
@@ -201,10 +203,10 @@ def main():
     if MODEL_NAME:
         # load existing model
         model = RecurrentPPO.load(
-            MODEL_DIR / MODEL_NAME.strip('.zip'),
+            MODEL_DIR / MODEL_NAME.strip(".zip"),
             tensorboard_log=TENSORBOARD_LOG,
         )
-        logger.success(f'Loaded model from {MODEL_DIR / MODEL_NAME}')
+        logger.success(f"Loaded model from {MODEL_DIR / MODEL_NAME}")
         model.set_env(trading_env)
     else:
         # policy = RecurrentActorCriticPolicy
@@ -213,7 +215,7 @@ def main():
             "MlpLstmPolicy",
             trading_env,
             verbose=0,
-            device='cuda',
+            device="cuda",
             tensorboard_log=TENSORBOARD_LOG,
             n_steps=1024,
             # gamma=0.9391973108460121,
@@ -224,9 +226,7 @@ def main():
             policy_kwargs=policy_kwargs,
         )
 
-    base_name = (
-        f"{STRATEGY}_{trading_env.env.__class__.__name__}_{model.__class__.__name__}_{start_date}"
-    )
+    base_name = f"{STRATEGY}_{trading_env.env.__class__.__name__}_{model.__class__.__name__}_{start_date}"
     tb_callback = SaveOnStepCallback(
         check_freq=35000,
         save_name=f"best_model_{base_name}",
@@ -247,12 +247,16 @@ def main():
     logger.info("Learning started.")
 
     t1 = time.time()
-    tb_log_name = f'{model.__class__.__name__}_{STRATEGY}_{start_date}_cont={bool(MODEL_NAME)}'
+    tb_log_name = (
+        f"{model.__class__.__name__}_{STRATEGY}_{start_date}_cont={bool(MODEL_NAME)}"
+    )
     env.writer = SummaryWriter(log_dir=str(Path(TENSORBOARD_LOG, tb_log_name)))
     model.learn(
-        total_timesteps=LEARNING_TIME_STEPS, callback=[tb_callback], tb_log_name=tb_log_name
+        total_timesteps=LEARNING_TIME_STEPS,
+        callback=[tb_callback],
+        tb_log_name=tb_log_name,
     )
-    print('Elapsed time:', timedelta(seconds=time.time() - t1))
+    print("Elapsed time:", timedelta(seconds=time.time() - t1))
     model.save(MODEL_DIR / f"final_model_{base_name}")
     # add_record(
     #     KEY,

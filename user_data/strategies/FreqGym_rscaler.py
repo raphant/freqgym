@@ -8,7 +8,6 @@ from freqtrade.strategy.interface import IStrategy
 from pandas import DataFrame, Series
 from stable_baselines3.a2c.a2c import A2C
 from stable_baselines3.ppo.ppo import PPO
-from ta import add_all_ta_features
 
 
 class FreqGymRScaler(IStrategy):
@@ -28,7 +27,7 @@ class FreqGymRScaler(IStrategy):
     trailing_stop_positive_offset = 0.017
     trailing_only_offset_is_reached = True
 
-    ticker_interval = '5m'
+    ticker_interval = "5m"
 
     use_sell_signal = True
 
@@ -42,7 +41,7 @@ class FreqGymRScaler(IStrategy):
 
     try:
         model = PPO.load(
-            'models/best_model_SimpleROIEnv_PPO_20211028_104631'
+            "models/best_model_SimpleROIEnv_PPO_20211028_104631"
         )  # Note: Make sure you use the same policy as the one used to train
         window_size = model.observation_space.shape[0]
     except Exception:
@@ -63,21 +62,21 @@ class FreqGymRScaler(IStrategy):
         """
 
         # Plus Directional Indicator / Movement
-        dataframe['plus_dm'] = ta.PLUS_DM(dataframe)
-        dataframe['plus_di'] = ta.PLUS_DI(dataframe)
+        dataframe["plus_dm"] = ta.PLUS_DM(dataframe)
+        dataframe["plus_di"] = ta.PLUS_DI(dataframe)
 
         # # Minus Directional Indicator / Movement
-        dataframe['minus_dm'] = ta.MINUS_DM(dataframe)
-        dataframe['minus_di'] = ta.MINUS_DI(dataframe)
+        dataframe["minus_dm"] = ta.MINUS_DM(dataframe)
+        dataframe["minus_di"] = ta.MINUS_DI(dataframe)
 
         # Awesome Oscillator
-        dataframe['ao'] = qtpylib.awesome_oscillator(dataframe)
+        dataframe["ao"] = qtpylib.awesome_oscillator(dataframe)
 
         # Ultimate Oscillator
-        dataframe['uo'] = ta.ULTOSC(dataframe)
+        dataframe["uo"] = ta.ULTOSC(dataframe)
 
         # EWO
-        dataframe['ewo'] = EWO(dataframe, 50, 200)
+        dataframe["ewo"] = EWO(dataframe, 50, 200)
 
         # # Hilbert Transform Indicator - SineWave
         # hilbert = ta.HT_SINE(dataframe)
@@ -93,35 +92,39 @@ class FreqGymRScaler(IStrategy):
 
         for period in self.timeperiods:
             # ADX
-            dataframe[f'adx_{period}'] = ta.ADX(dataframe, timeperiod=period)
+            dataframe[f"adx_{period}"] = ta.ADX(dataframe, timeperiod=period)
 
             # Williams %R
-            dataframe[f'wr_{period}'] = williams_r(dataframe, timeperiod=period)
+            dataframe[f"wr_{period}"] = williams_r(dataframe, timeperiod=period)
 
             # CCI
-            dataframe[f'cci_{period}'] = ta.CCI(dataframe, timeperiod=period)
+            dataframe[f"cci_{period}"] = ta.CCI(dataframe, timeperiod=period)
 
             # RSI
-            dataframe[f'rsi_{period}'] = ta.RSI(dataframe, timeperiod=period)
+            dataframe[f"rsi_{period}"] = ta.RSI(dataframe, timeperiod=period)
 
             # Inverse Fisher transform on RSI: values [-1.0, 1.0] (https://goo.gl/2JGGoy)
-            rsi = 0.1 * (dataframe[f'rsi_{period}'] - 50)
-            dataframe[f'fisher_rsi_{period}'] = (np.exp(2 * rsi) - 1) / (np.exp(2 * rsi) + 1)
+            rsi = 0.1 * (dataframe[f"rsi_{period}"] - 50)
+            dataframe[f"fisher_rsi_{period}"] = (np.exp(2 * rsi) - 1) / (
+                np.exp(2 * rsi) + 1
+            )
 
             # Inverse Fisher transform on RSI normalized: values [0.0, 100.0] (https://goo.gl/2JGGoy)
-            dataframe[f'fisher_rsi_norma_{period}'] = 50 * (dataframe[f'fisher_rsi_{period}'] + 1)
+            dataframe[f"fisher_rsi_norma_{period}"] = 50 * (
+                dataframe[f"fisher_rsi_{period}"] + 1
+            )
 
             # Aroon, Aroon Oscillator
             aroon = ta.AROON(dataframe, timeperiod=period)
-            dataframe[f'aroonup_{period}'] = aroon['aroonup']
-            dataframe[f'aroondown_{period}'] = aroon['aroondown']
-            dataframe[f'aroonosc_{period}'] = ta.AROONOSC(dataframe, timeperiod=period)
+            dataframe[f"aroonup_{period}"] = aroon["aroonup"]
+            dataframe[f"aroondown_{period}"] = aroon["aroondown"]
+            dataframe[f"aroonosc_{period}"] = ta.AROONOSC(dataframe, timeperiod=period)
 
             # Chande Momentum Oscillator
-            dataframe[f'cmo_{period}'] = ta.CMO(dataframe, timeperiod=period)
+            dataframe[f"cmo_{period}"] = ta.CMO(dataframe, timeperiod=period)
 
             # Money Flow Index
-            dataframe[f'mfi_{period}'] = ta.MFI(dataframe, timeperiod=period)
+            dataframe[f"mfi_{period}"] = ta.MFI(dataframe, timeperiod=period)
 
             # # EMA - Exponential Moving Average
             # dataframe[f'ema_{period}'] = ta.EMA(dataframe, timeperiod=period)
@@ -144,7 +147,7 @@ class FreqGymRScaler(IStrategy):
         """
         # dataframe['buy'] = self.rl_model_predict(dataframe)
         action = self.rl_model_predict(dataframe)
-        dataframe['buy'] = (action == 1).astype('int')
+        dataframe["buy"] = (action == 1).astype("int")
 
         return dataframe
 
@@ -157,7 +160,7 @@ class FreqGymRScaler(IStrategy):
         """
 
         action = self.rl_model_predict(dataframe)
-        dataframe['sell'] = (action == 2).astype('int')
+        dataframe["sell"] = (action == 2).astype("int")
 
         return dataframe
 
@@ -167,7 +170,17 @@ class FreqGymRScaler(IStrategy):
             dataframe[
                 dataframe.columns[
                     ~dataframe.columns.isin(
-                        ['date', 'open', 'close', 'high', 'low', 'volume', 'buy', 'sell', 'buy_tag']
+                        [
+                            "date",
+                            "open",
+                            "close",
+                            "high",
+                            "low",
+                            "volume",
+                            "buy",
+                            "sell",
+                            "buy_tag",
+                        ]
                     )
                 ]
             ]
@@ -190,7 +203,7 @@ def EWO(dataframe, sma1_length=5, sma2_length=35):
     df = dataframe.copy()
     sma1 = ta.EMA(df, timeperiod=sma1_length)
     sma2 = ta.EMA(df, timeperiod=sma2_length)
-    smadif = (sma1 - sma2) / df['close'] * 100
+    smadif = (sma1 - sma2) / df["close"] * 100
     return smadif
 
 
