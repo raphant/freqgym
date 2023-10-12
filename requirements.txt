@@ -1,8 +1,5 @@
 pandas
 numpy
--e ../ftworkdir/lazyft_pkg/
--e ../freqtrade/
--r ../freqtrade/requirements-hyperopt.txt
 scipy
 gym
 torch
@@ -10,8 +7,13 @@ keras
 pillow
 pyts
 tensorflow
-tensorflow-gpu
 scikit-learn
 diskcache
 torchvision
 matplotlib
+stable_baselines3
+wandb
+mpu
+sb3_contrib
+freqtrade==2022.6
+git+https://github.com/raphant/lazyft.git#egg=lazyft

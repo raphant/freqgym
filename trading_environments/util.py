@@ -13,7 +13,7 @@ def get_average_ratio(trades: list[Trade]) -> float:
     """
     if len(trades) == 0:
         return 0
-    return sum([t.calc_profit_ratio() for t in trades]) / len(trades) * 100
+    return sum([t.calc_profit_ratio(t.close_rate) for t in trades]) / len(trades) * 100
 
 
 def get_total_profit_percent(trades: list[Trade]) -> float:
@@ -22,7 +22,7 @@ def get_total_profit_percent(trades: list[Trade]) -> float:
     :param trades: A list of trades
     :return: The total profit of the trades
     """
-    return sum([t.calc_profit_ratio() for t in trades]) * 100
+    return sum([t.calc_profit_ratio(t.close_rate) for t in trades]) * 100
 
 
 def get_average_stake(trades: list[Trade]) -> float:

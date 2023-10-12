@@ -52,8 +52,6 @@ class FreqtradeMergedData(DataInterface):
     pass
 
 
-class 
-
 @dataclass
 class PairData:
     pair: str
