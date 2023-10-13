@@ -15,5 +15,4 @@ stable_baselines3
 wandb
 mpu
 sb3_contrib
-freqtrade==2022.6
-git+https://github.com/raphant/lazyft.git#egg=lazyft
+freqtrade==2022.7
